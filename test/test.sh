@@ -41,7 +41,7 @@ if ! grep -q "^\"${USER}\"" userlist.txt; then
 fi
 
 echo "Testing for sudo access."
-sudo true && CAN_SUDO=1
+#sudo true && CAN_SUDO=1
 
 if test -n "$CAN_SUDO"; then
 	case `uname` in

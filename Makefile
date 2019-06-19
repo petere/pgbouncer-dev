@@ -21,6 +21,7 @@ pgbouncer_SOURCES = \
 	src/stats.c \
 	src/system.c \
 	src/takeover.c \
+	src/tls.c \
 	src/util.c \
 	src/varcache.c \
 	include/admin.h \

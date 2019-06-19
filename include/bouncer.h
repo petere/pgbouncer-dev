@@ -106,6 +106,7 @@ extern int cf_sbuf_len;
 #include "janitor.h"
 #include "hba.h"
 #include "pam.h"
+#include "tls.h"
 
 /* to avoid allocations will use static buffers */
 #define MAX_DBNAME	64

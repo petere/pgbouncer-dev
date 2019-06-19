@@ -32,8 +32,6 @@
 #include <stdarg.h>
 #include <limits.h>
 
-#include <usual/tls/tls.h>
-
 #ifdef HAVE_LIBGEN_H
 #include <libgen.h>
 #endif

@@ -26,10 +26,6 @@
 
 #include "bouncer.h"
 
-#ifdef USUAL_LIBSSL_FOR_TLS
-#define USE_TLS
-#endif
-
 /* sbuf_main_loop() skip_recv values */
 #define DO_RECV		false
 #define SKIP_RECV	true
@@ -1159,7 +1155,7 @@ void sbuf_cleanup(void)
 	client_accept_base = NULL;
 }
 
-#else
+#else /* !USE_TLS */
 
 void sbuf_tls_setup(void) { }
 bool sbuf_tls_accept(SBuf *sbuf) { return false; }
@@ -1174,4 +1170,4 @@ static bool handle_tls_handshake(SBuf *sbuf)
 	return false;
 }
 
-#endif
+#endif /* !USE_TLS */
