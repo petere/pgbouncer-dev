@@ -1,0 +1,26 @@
+name: Build
+on: [push]
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-16.04, ubuntu-18.04]
+        compiler: [gcc, clang]
+        configure_args: ["", "--with-udns"]
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - run: sudo apt-get install curl ca-certificates gnupg
+    - run: curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+    - run: sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+    - run: sudo apt-get update
+    - name: Install build dependencies
+      run: sudo apt-get -y install libevent-dev libudns-dev pandoc postgresql-11 python
+    - run: ./autogen.sh
+    - name: Run configure
+      run: ./configure CC=${{matrix.compiler}} --prefix=$HOME/install --enable-cassert --enable-werror --without-cares ${{matrix.configure_args}}
+    - run: make
+    - run: PATH=/usr/lib/postgresql/11/bin:$PATH make check
+    - run: make install
