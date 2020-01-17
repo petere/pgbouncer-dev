@@ -253,7 +253,8 @@ static bool send_one_fd(PgSocket *admin,
 			const char *std_strings,
 			const char *datestyle,
 			const char *timezone,
-			const char *password)
+			const char *password,
+			bool is_pam_user)
 {
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
@@ -263,10 +264,10 @@ static bool send_one_fd(PgSocket *admin,
 
 	struct PktBuf *pkt = pktbuf_temp();
 
-	pktbuf_write_DataRow(pkt, "issssiqisssss",
+	pktbuf_write_DataRow(pkt, "issssiqisssssi",
 		      fd, task, user, db, addr, port, ckey, link,
 		      client_enc, std_strings, datestyle, timezone,
-		      password);
+		      password, is_pam_user);
 	if (pkt->failed)
 		return false;
 	iovec.iov_base = pkt->buf;
@@ -334,7 +335,7 @@ static bool show_one_fd(PgSocket *admin, PgSocket *sk)
 		password = sk->auth_user->passwd;
 
 	/* PAM requires passwords as well since they are not stored externally */
-	if (cf_auth_type == AUTH_PAM && !find_user(sk->auth_user->name))
+	if (sk->auth_user->is_pam_user)
 		password = sk->auth_user->passwd;
 
 	return send_one_fd(admin, sbuf_socket(&sk->sbuf),
@@ -349,7 +350,8 @@ static bool show_one_fd(PgSocket *admin, PgSocket *sk)
 			   std_strings ? std_strings->str : NULL,
 			   datestyle ? datestyle->str : NULL,
 			   timezone ? timezone->str : NULL,
-			   password);
+			   password,
+			   sk->auth_user->is_pam_user);
 }
 
 static bool show_pooler_cb(void *arg, int fd, const PgAddr *a)
@@ -358,7 +360,7 @@ static bool show_pooler_cb(void *arg, int fd, const PgAddr *a)
 
 	return send_one_fd(arg, fd, "pooler", NULL, NULL,
 			   pga_ntop(a, buf, sizeof(buf)), pga_port(a), 0, 0,
-			   NULL, NULL, NULL, NULL, NULL);
+			   NULL, NULL, NULL, NULL, NULL, false);
 }
 
 /* send a row with sendmsg, optionally attaching a fd */
@@ -424,13 +426,14 @@ static bool admin_show_fds(PgSocket *admin, const char *arg)
 	/*
 	 * send resultset
 	 */
-	SEND_RowDescription(res, admin, "issssiqisssss",
+	SEND_RowDescription(res, admin, "issssiqisssssi",
 				 "fd", "task",
 				 "user", "database",
 				 "addr", "port",
 				 "cancel", "link",
 				 "client_encoding", "std_strings",
-				 "datestyle", "timezone", "password");
+				 "datestyle", "timezone", "password",
+				 "is_pam_user");
 	if (res)
 		res = show_pooler_fds(admin);
 
@@ -1493,7 +1496,7 @@ bool admin_pre_login(PgSocket *client, const char *username)
 	 * auth_type=any does not keep original username around,
 	 * so username based check has to take place here
 	 */
-	if (cf_auth_type == AUTH_ANY) {
+	if (client->client_auth_type == AUTH_ANY) {
 		if (strlist_contains(cf_admin_users, username)) {
 			client->auth_user = admin_pool->db->forced_user;
 			client->admin_user = 1;
@@ -1510,7 +1513,7 @@ bool admin_post_login(PgSocket *client)
 {
 	const char *username = client->auth_user->name;
 
-	if (cf_auth_type == AUTH_ANY)
+	if (client->client_auth_type == AUTH_ANY)
 		return true;
 
 	if (client->admin_user || strlist_contains(cf_admin_users, username)) {

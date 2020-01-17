@@ -437,6 +437,7 @@ PgUser *add_pam_user(const char *name, const char *passwd)
 		list_init(&user->head);
 		list_init(&user->pool_list);
 		safe_strcpy(user->name, name, sizeof(user->name));
+		user->is_pam_user = true;
 
 		aatree_insert(&pam_user_tree, (uintptr_t)user->name, &user->tree_node);
 		user->pool_mode = POOL_INHERIT;
@@ -1369,7 +1370,7 @@ bool use_client_socket(int fd, PgAddr *addr,
 		       uint64_t ckey, int oldfd, int linkfd,
 		       const char *client_enc, const char *std_string,
 		       const char *datestyle, const char *timezone,
-		       const char *password)
+		       const char *password, bool is_pam_user)
 {
 	PgSocket *client;
 	PktBuf tmp;
@@ -1379,8 +1380,17 @@ bool use_client_socket(int fd, PgAddr *addr,
 		return false;
 	client->suspended = 1;
 
+	/*
+	 * NB: We can ignore is_pam_user here because set_pool() will
+	 * figure it out based on the authentication configuration.
+	 */
+
 	if (!set_pool(client, dbname, username, password, true))
 		return false;
+
+	if ((is_pam_user && client->client_auth_type != AUTH_PAM)
+	    || (!is_pam_user && client->client_auth_type == AUTH_PAM))
+		log_warning("client authentication configuration mismatch after takeover?");
 
 	change_client_state(client, CL_ACTIVE);
 
@@ -1405,7 +1415,7 @@ bool use_server_socket(int fd, PgAddr *addr,
 		       uint64_t ckey, int oldfd, int linkfd,
 		       const char *client_enc, const char *std_string,
 		       const char *datestyle, const char *timezone,
-		       const char *password)
+		       const char *password, bool is_pam_user)
 {
 	PgDatabase *db = find_database(dbname);
 	PgUser *user;
@@ -1423,7 +1433,7 @@ bool use_server_socket(int fd, PgAddr *addr,
 
 	if (db->forced_user) {
 		user = db->forced_user;
-	} else if (cf_auth_type == AUTH_PAM) {
+	} else if (is_pam_user) {
 		user = add_pam_user(username, password);
 	} else {
 		user = find_user(username);

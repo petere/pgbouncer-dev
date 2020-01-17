@@ -167,7 +167,6 @@ static bool finish_set_pool(PgSocket *client, bool takeover)
 {
 	PgUser *user = client->auth_user;
 	bool ok = false;
-	int auth;
 
 	/* pool user may be forced */
 	if (client->db->forced_user) {
@@ -205,22 +204,13 @@ static bool finish_set_pool(PgSocket *client, bool takeover)
 	if (client->own_user)
 		return finish_client_login(client);
 
-	auth = cf_auth_type;
-	if (auth == AUTH_HBA) {
-		auth = hba_eval(parsed_hba, &client->remote_addr, !!client->sbuf.tls,
-				client->db->name, client->auth_user->name);
-	}
-
-	if (auth == AUTH_MD5)
+	if (client->client_auth_type == AUTH_MD5)
 	{
 		if (get_password_type(client->auth_user->passwd) == PASSWORD_TYPE_SCRAM_SHA_256)
-			auth = AUTH_SCRAM_SHA_256;
+			client->client_auth_type = AUTH_SCRAM_SHA_256;
 	}
 
-	/* remember method */
-	client->client_auth_type = auth;
-
-	switch (auth) {
+	switch (client->client_auth_type) {
 	case AUTH_ANY:
 	case AUTH_TRUST:
 		ok = finish_client_login(client);
@@ -268,6 +258,12 @@ bool set_pool(PgSocket *client, const char *dbname, const char *username, const 
 		return false;
 	}
 
+	/* Determine and remember auth method */
+	client->client_auth_type = cf_auth_type;
+	if (client->client_auth_type == AUTH_HBA)
+		client->client_auth_type = hba_eval(parsed_hba, &client->remote_addr, !!client->sbuf.tls,
+						    dbname, username);
+
 	if (client->db->admin) {
 		if (admin_pre_login(client, username))
 			return finish_set_pool(client, takeover);
@@ -289,7 +285,7 @@ bool set_pool(PgSocket *client, const char *dbname, const char *username, const 
 	}
 
 	/* find user */
-	if (cf_auth_type == AUTH_ANY) {
+	if (client->client_auth_type == AUTH_ANY) {
 		/* ignore requested user */
 		if (client->db->forced_user == NULL) {
 			slog_error(client, "auth_type=any requires forced user");
@@ -297,7 +293,7 @@ bool set_pool(PgSocket *client, const char *dbname, const char *username, const 
 			return false;
 		}
 		client->auth_user = client->db->forced_user;
-	} else if (cf_auth_type == AUTH_PAM) {
+	} else if (client->client_auth_type == AUTH_PAM) {
 		if (client->db->auth_user) {
 			slog_error(client, "PAM can't be used together with database authentication");
 			disconnect_client(client, true, "bouncer config error");
