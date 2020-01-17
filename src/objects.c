@@ -271,6 +271,18 @@ void change_server_state(PgSocket *server, SocketState newstate)
 	}
 }
 
+static int cmp_user_internal(const PgUser *u1, const PgUser *u2)
+{
+	int result;
+
+	result = strcmp(u1->name, u2->name);
+
+	if (result == 0)
+		result = (u2->is_pam_user - u1->is_pam_user);
+
+	return result;
+}
+
 /* compare pool names, for use with put_in_order */
 static int cmp_pool(struct List *i1, struct List *i2)
 {
@@ -279,7 +291,7 @@ static int cmp_pool(struct List *i1, struct List *i2)
 	if (p1->db != p2->db)
 		return strcmp(p1->db->name, p2->db->name);
 	if (p1->user != p2->user)
-		return strcmp(p1->user->name, p2->user->name);
+		return cmp_user_internal(p1->user, p2->user);
 	return 0;
 }
 
@@ -288,7 +300,7 @@ static int cmp_user(struct List *i1, struct List *i2)
 {
 	PgUser *u1 = container_of(i1, PgUser, head);
 	PgUser *u2 = container_of(i2, PgUser, head);
-	return strcmp(u1->name, u2->name);
+	return cmp_user_internal(u1, u2);
 }
 
 /* compare db names, for use with put_in_order */
