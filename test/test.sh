@@ -860,6 +860,19 @@ test_show() {
 	return 0
 }
 
+test_dns() {
+	dnsmasq -d -h -H testhosts -q -2 -R >log/dnsmasq.log 2>&1 &
+	dnsmasq_pid=$!
+	kill -0 $dnsmasq_pid || return 1
+
+	psql -X -U puser1 -d p10 -c "select 1"
+	rc=$?
+
+	kill $dnsmasq_pid
+
+	test $rc -eq 0
+}
+
 testlist="
 test_show_version
 test_server_login_retry
@@ -892,6 +905,7 @@ test_md5_client
 test_scram_server
 test_scram_client
 test_show
+test_dns
 "
 
 if [ $# -gt 0 ]; then
