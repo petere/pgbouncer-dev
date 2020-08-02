@@ -1,0 +1,132 @@
+task:
+  name: Linux (Debian/Ubuntu)
+  container:
+    matrix:
+      - image: debian:stable
+      - image: debian:oldstable
+#      - image: ubuntu:20.04
+      - image: ubuntu:18.04
+      - image: ubuntu:16.04
+      - image: ubuntu:14.04
+  submodules_script:
+    - apt-get update
+    - apt-get -y install git
+    - git submodule update --init
+  setup_script:
+    - apt-get update
+    - apt-get -y install autoconf automake libevent-dev libssl-dev libtool make pandoc postgresql pkg-config python
+  build_script:
+    - ./autogen.sh
+    - ./configure --prefix=$HOME/install --enable-werror
+    - make
+  test_script:
+    - make check
+  install_script:
+    - make install
+  always:
+    configure_artifacts:
+      path: "config.log"
+      type: text/plain
+
+task:
+  name: Linux (Red Hat)
+  container:
+    matrix:
+      - image: centos:centos8
+      - image: centos:centos7
+  submodules_script:
+    - yum -y install git
+    - git submodule update --init
+  setup_script:
+    - yum -y install autoconf automake libevent-devel libtool make openssl-devel pkg-config postgresql-server wget
+    - if cat /etc/centos-release | grep -q ' 7'; then yum -y install python; else yum -y install python3; fi
+    - wget -O /tmp/pandoc.tar.gz https://github.com/jgm/pandoc/releases/download/2.10.1/pandoc-2.10.1-linux-amd64.tar.gz
+    - tar xvzf /tmp/pandoc.tar.gz --strip-components 1 -C /usr/local/
+  build_script:
+    - ./autogen.sh
+    - ./configure --prefix=$HOME/install --enable-werror
+    - make
+  test_script:
+    - make check
+  install_script:
+    - make install
+  always:
+    configure_artifacts:
+      path: "config.log"
+      type: text/plain
+
+task:
+  name: Linux (Alpine)
+  container:
+    matrix:
+      - image: alpine:latest
+  submodules_script:
+    - apk add git
+    - git submodule update --init
+  setup_script:
+    - apk update
+    - apk add autoconf automake build-base libevent-dev libtool openssl-dev pkgconf postgresql python3 wget
+    - wget -O /tmp/pandoc.tar.gz https://github.com/jgm/pandoc/releases/download/2.10.1/pandoc-2.10.1-linux-amd64.tar.gz
+    - tar xvzf /tmp/pandoc.tar.gz --strip-components 1 -C /usr/local/
+  build_script:
+    - ./autogen.sh
+    - ./configure --prefix=$HOME/install --enable-werror
+    - make
+  test_script:
+    - make check
+  install_script:
+    - make install
+  always:
+    configure_artifacts:
+      path: "config.log"
+      type: text/plain
+
+task:
+  name: FreeBSD
+  freebsd_instance:
+    image_family: freebsd-12-1
+  submodules_script:
+    - pkg install -y git
+    - git submodule update --init
+  setup_script:
+    - pkg install -y autoconf automake bash gmake hs-pandoc libevent libtool pkgconf postgresql12-server python
+  env:
+    CPPFLAGS: -I/usr/local/include
+    LDFLAGS: -L/usr/local/lib
+  build_script:
+    - ./autogen.sh
+    - ./configure --prefix=$HOME/install --enable-werror
+    - gmake
+  test_script:
+    - gmake check
+  install_script:
+    - gmake install
+  always:
+    configure_artifacts:
+      path: "config.log"
+      type: text/plain
+
+task:
+  name: macOS
+  osx_instance:
+    matrix:
+      - image: catalina-base
+  submodules_script:
+    - git submodule update --init
+  setup_script:
+    - brew install autoconf automake libevent libtool openssl pandoc pkg-config postgresql
+  env:
+    CPPFLAGS: -I/usr/local/opt/openssl/include
+    LDFLAGS: -L/usr/local/opt/openssl/lib
+  build_script:
+    - ./autogen.sh
+    - ./configure --prefix=$HOME/install --enable-werror
+    - make
+  test_script:
+    - make check
+  install_script:
+    - make install
+  always:
+    configure_artifacts:
+      path: "config.log"
+      type: text/plain
