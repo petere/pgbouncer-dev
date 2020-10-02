@@ -40,6 +40,9 @@ case `uname` in
 Linux)
 	SED_ERE_OP='-r'
 	;;
+*)
+	which gsed && sed() { gsed "$@"; }
+	;;
 esac
 
 pg_majorversion=$(initdb --version | sed -n $SED_ERE_OP 's/.* ([0-9]+).*/\1/p')

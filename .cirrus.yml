@@ -89,7 +89,7 @@ task:
     - pkg install -y git
     - git submodule update --init
   setup_script:
-    - pkg install -y autoconf automake bash gmake hs-pandoc libevent libtool pkgconf postgresql12-server python
+    - pkg install -y autoconf automake bash gmake gsed hs-pandoc libevent libtool pkgconf postgresql12-server python
   env:
     CPPFLAGS: -I/usr/local/include
     LDFLAGS: -L/usr/local/lib

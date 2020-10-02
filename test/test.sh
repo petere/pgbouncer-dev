@@ -57,6 +57,9 @@ case `uname` in
 Linux)
 	SED_ERE_OP='-r'
 	;;
+*)
+	which gsed && sed() { gsed "$@"; }
+	;;
 esac
 
 case `uname` in
