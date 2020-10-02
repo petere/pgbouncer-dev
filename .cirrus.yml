@@ -103,7 +103,7 @@ task:
     - gmake install
   always:
     configure_artifacts:
-      path: "config.log"
+      path: "test/log/pg.log"
       type: text/plain
 
 task:

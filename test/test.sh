@@ -3,6 +3,7 @@
 # Notes:
 # - uses iptables and -F with some tests, probably not very friendly to your firewall
 
+set -x
 cd $(dirname $0)
 
 export PGDATA=$PWD/pgdata
