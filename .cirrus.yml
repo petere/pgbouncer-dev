@@ -2,9 +2,13 @@ env:
   DEBIAN_FRONTEND: noninteractive
   LANG: C
   PGVERSION: 11
+  CCACHE_DIR: "/tmp/ccache_dir"
+  PATH: /usr/lib/ccache:${PATH}
 
 task:
   name: Linux (Debian/Ubuntu)
+  ccache_cache:
+    folder: "/tmp/ccache_dir"
   matrix:
     - container:
         image: ubuntu:20.04
@@ -66,7 +70,7 @@ task:
     - apt-get -y install git
     - git submodule update --init
   setup_script:
-    - apt-get -y install curl gnupg lsb-release
+    - apt-get -y install curl gnupg lsb-release ccache
     - curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
     - echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | tee /etc/apt/sources.list.d/pgdg.list
     - apt-get update
@@ -76,11 +80,12 @@ task:
     - if [ x"$use_valgrind" = x"yes" ]; then pkgs="$pkgs valgrind"; fi
     - apt-get -y install $pkgs
     - useradd user
-    - chown -R user .
+    - chown -R user . /tmp/ccache_dir/
   build_script:
     - su user -c "./autogen.sh"
     - su user -c "./configure --prefix=$HOME/install --enable-cassert --enable-werror --without-cares $configure_args"
-    - su user -c "make"
+    - su user -c "CCACHE_LOGFILE=/tmp/ccache.log make"
+    - su user -c "ccache --show-stats"
   test_script:
     - |
       if [ x"$use_valgrind" = x"yes" ]; then
@@ -104,7 +109,11 @@ task:
     - ./configure --prefix=$HOME/install2 --enable-werror --without-cares $configure_args
     - make
     - make install
+    - ccache --show-stats
   always:
     configure_artifacts:
       path: "config.log"
+      type: text/plain
+    ccache_log_artifacts:
+      path: "/tmp/ccache.log"
       type: text/plain
