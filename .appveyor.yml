@@ -15,8 +15,8 @@ build_script:
   - set HOME=.
   - set PATH=C:/msys64/usr/bin;%PATH%
   - sh -l -c "./autogen.sh"
-  - sh -l -c "./configure --enable-werror"
-  - sh -l -c "make"
+  - sh -l -c "./configure --enable-werror LDFLAGS=-static PKG_CONFIG='pkg-config --static'"
+  - sh -l -c "make V=1"
   - sh -l -c "make install"
   - sh -l -c "make zip"
 
