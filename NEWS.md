@@ -1,6 +1,56 @@
 PgBouncer changelog
 ===================
 
+PgBouncer 1.16.x
+----------------
+
+**2021-08-09  -  PgBouncer 1.16.0  -  TODO**
+
+- Features
+  * Support hot reloading of TLS settings.
+  * Add support for abstract Unix-domain sockets.  This matches the
+    corresponding PostgreSQL 14 feature.
+  * The maximum lengths of passwords and user names have been
+    increased to 996 and 128, respectively.  Various cloud services
+    require this.
+  * The minimum pool size can now be set per database, similar to the
+    regular pool size and the reserve pool size.
+  * The number of pending query cancellations is shown in `SHOW
+    POOLS`.
+
+- Fixes
+  * Configuration parsing now has tighter error handling in many
+    places.  Where previously it might have logged an error and
+    proceeded, those configuration errors will now result in startup
+    failures.  This is what always should have happened, but some code
+    didn't do this right.  Some users might discover that their
+    configurations have been faulty all along and will not work
+    anymore.
+  * Query cancel handling has been fixed.  Under some circumstances,
+    cancel requests would seemingly get stuck for a long time.  This
+    should no longer happen.  In fact, cancel requests can now exceed
+    the pool size by a factor of two, so they really shouldn't get
+    stuck anymore.
+  * Mixed use of md5 and scram via hba has been fixed.
+  * The build with c-ares on Windows has been fixed.
+  * The dreaded "FIXME: query end, but query_start == 0" messages have
+    been fixed.  We now know why they happen, and you shouldn't see
+    them anymore.
+  * Fix reloading of `default_pool_size`, `min_pool_size`, and
+    `res_pool_size`.  Reloading these settings previously didn't work.
+
+- Cleanups
+  * Cirrus CI is now used instead of Travis CI.
+  * As usual, many tests cases have been added.
+  * The "unclean server" log message has been clarified a bit.
+  * You can no longer use "pgbouncer" has a database name.  This name
+    is reserved for the admin console, and using it as a normal
+    database name never really worked right.  This is now explicitly
+    prohibited.
+  * Errors send to clients before the connection is closed are now
+    labeled as FATAL instead of just ERROR.  Some clients were
+    confused otherwise.
+
 PgBouncer 1.15.x
 ----------------
 
